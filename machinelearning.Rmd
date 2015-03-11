@@ -1,0 +1,85 @@
+---
+title: "Machine Learning Assignment"
+author: "Raul Caceres"
+date: "10 March 2015"
+output: html_document
+---
+# Executive Summary
+
+6 participants used accelerometers to measure activity through a wearable device.  These participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+The goal of this paper is to predict the manner in which each of the participants did the exercise.
+
+
+```{r, echo=TRUE}
+# We first need to load a few libraries that will be required during the analysis 
+library(caret)
+library(corrplot)
+library(kernlab)
+library(knitr)
+library(randomForest)
+```
+
+The data for this paper was kindly made available by http://groupware.les.inf.puc-rio.br/har 
+
+We initially need to load and clean the training data that will be used for the analysis and which we will use to develop the model that will be later on used with the test data 
+
+```{r, echo=TRUE}
+training <- read.csv("pml-training.csv", na.strings= c("NA",""," ")) #read file
+trainingNA <- apply(training, 2, function(x) {sum(is.na(x))})
+trainingClean <- training[,which(trainingNA == 0)]
+trainingClean <- trainingClean[8:length(trainingClean)]
+```
+
+We will now split the cleaned data into training and validation
+
+```{r, echo=TRUE}
+inTrain <- createDataPartition(y = trainingClean$classe, p = 0.7, list = FALSE)
+training <- trainingClean[inTrain, ]
+crossval <- trainingClean[-inTrain, ]
+```
+
+A correlation plot was created to identify correlations across the different vairables.
+
+```{r, echo=TRUE}
+correlMatrix <- cor(training[, -length(training)])
+corrplot(correlMatrix, order = "FPC", method = "circle", type = "lower", tl.cex = 0.8,  tl.col = rgb(0, 0, 0))
+```
+
+And a random forest model was used to use the different variables. 
+
+```{r, echo=TRUE}
+rfModel <- randomForest(classe ~ ., data = training)
+rfModel
+```
+
+The model found is then used wiwth the cross validation set.
+
+```{r, echo=TRUE}
+predictCrossVal <- predict(rfModel, crossval)
+confusionMatrix(crossval$classe, predictCrossVal)
+```
+
+The prediction value of 99.39% shows that the model is good.
+
+This is then finally applied to the test set.
+
+```{r,echo=TRUE}
+#Clean the data
+test <- read.csv("pml-testing.csv", na.strings= c("NA",""," "))
+testNA <- apply(test, 2, function(x) {sum(is.na(x))})
+testClean <- test[,which(testNA == 0)]
+testClean <- testClean[8:length(testClean)]
+
+```
+
+And we then apply the model to the test set 
+
+```{r, echo=TRUE}
+predictTest <- predict(rfModel, testClean)
+predictTest
+```
+
+
+
+
